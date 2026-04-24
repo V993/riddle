@@ -1,5 +1,7 @@
 # Gollum's riddle website
 
+https://v993.github.io/riddle/
+
 Play at your own risk. Answer a riddle incorrectly 5 times and he will eat you, as is customary.
 
 
