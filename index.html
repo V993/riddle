@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Riddle me this, batman</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #1a1008;
+      color: #d4b483;
+      font-family: Georgia, 'Times New Roman', serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #flash {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.1s ease;
+      z-index: 100;
+    }
+    #flash.red  { background: #ff0000; }
+    #flash.green { background: #00cc44; }
+    #flash.show { opacity: 0.45; }
+
+    .main {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      padding: 45vh 24px 24px;
+      max-width: 680px;
+      width: 100%;
+      text-align: center;
+    }
+
+    #gollum-bg {
+      position: fixed;
+      top: 4%;
+      left: 50%;
+      transform: translate(-50%, 10%); /* Gollum's location */
+      width: 260px;
+      height: 260px;
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.9;
+      transition: width 0.35s ease, height 0.35s ease, top 0.35s ease;
+    }
+
+    /* eaten screen */
+    #eaten-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 300;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      padding: 40px;
+      text-align: center;
+    }
+    #eaten-screen.open { display: flex; }
+    #eaten-screen .eaten-answer {
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      color: #8a6a3a;
+      cursor: default;
+    }
+    #eaten-screen .eaten-answer span {
+      color: #e8d5a8;
+      font-style: italic;
+      font-size: xx-large;
+    }
+
+    #riddle-text {
+      font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+      line-height: 1.65;
+      color: #e8d5a8;
+      font-style: italic;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8);
+      min-height: 5em;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    #answer-input {
+      flex: 1;
+      padding: 12px 16px;
+      font-size: 1rem;
+      font-family: inherit;
+      background: #2a1c0a;
+      border: 1px solid #6b4f28;
+      border-radius: 6px;
+      color: #e8d5a8;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #answer-input:focus { border-color: #c89a44; }
+    #answer-input::placeholder { color: #6b4f28; }
+
+    #submit-btn {
+      padding: 12px 22px;
+      font-size: 1rem;
+      font-family: inherit;
+      background: #5a3a12;
+      border: 1px solid #8a5e28;
+      border-radius: 6px;
+      color: #e8d5a8;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    #submit-btn:hover { background: #7a5222; }
+
+    /* bottom-left: correct count */
+    #correct-counter {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      font-size: 0.9rem;
+      color: #8ecf8e;
+      cursor: pointer;
+      user-select: none;
+      z-index: 10;
+    }
+    #correct-counter:hover { text-decoration: underline; }
+
+    /* bottom-right: attempts */
+    #attempts-box {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      max-width: 260px;
+      text-align: right;
+      z-index: 10;
+    }
+    #attempts-label {
+      font-size: 0.75rem;
+      color: #7a5a3a;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .attempt-item {
+      font-size: 0.88rem;
+      color: #cc6666;
+      line-height: 1.5;
+    }
+
+    /* solved riddles modal */
+    #solved-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #solved-modal.open { display: flex; }
+
+    .modal-box {
+      background: #1e1206;
+      border: 1px solid #6b4f28;
+      border-radius: 10px;
+      padding: 28px;
+      max-width: 560px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      color: #d4b483;
+    }
+    .modal-box h2 {
+      font-size: 1.2rem;
+      margin-bottom: 16px;
+      color: #8ecf8e;
+    }
+    .solved-entry {
+      border-top: 1px solid #3a2810;
+      padding: 10px 0;
+    }
+    .solved-entry .q { font-style: italic; color: #e8d5a8; margin-bottom: 4px; }
+    .solved-entry .a { font-size: 0.9rem; color: #8ecf8e; }
+
+    .modal-close {
+      margin-top: 20px;
+      display: block;
+      text-align: right;
+      font-size: 0.85rem;
+      color: #7a5a3a;
+      cursor: pointer;
+    }
+    .modal-close:hover { color: #c89a44; }
+  </style>
+</head>
+<body>
+
+<div id="flash"></div>
+
+<img id="gollum-bg" src="gollum_happy.png" alt="Gollum" />
+
+<div class="main">
+  <p id="riddle-text">Loading riddle…</p>
+  <div class="input-row">
+    <input id="answer-input" type="text" placeholder="My answer is…" autocomplete="off" />
+    <button id="submit-btn">Submit</button>
+  </div>
+</div>
+
+<div id="correct-counter"></div>
+
+<div id="attempts-box">
+  <div id="attempts-label" style="display:none">Wrong guesses</div>
+  <div id="attempts-list"></div>
+</div>
+
+<div id="eaten-screen">
+  <div class="eaten-answer"><span id="eaten-answer-text"></span></div>
+</div>
+
+<div id="solved-modal">
+  <div class="modal-box">
+    <h2>Solved Riddles</h2>
+    <div id="solved-list"></div>
+    <span class="modal-close" id="modal-close">Close ✕</span>
+  </div>
+</div>
+
+<script>
+  const IMG   = document.getElementById('gollum-bg');
+  const TEXT  = document.getElementById('riddle-text');
+  const INPUT = document.getElementById('answer-input');
+  const BTN   = document.getElementById('submit-btn');
+  const FLASH = document.getElementById('flash');
+  const COUNTER   = document.getElementById('correct-counter');
+  const ATT_LABEL = document.getElementById('attempts-label');
+  const ATT_LIST  = document.getElementById('attempts-list');
+  const MODAL     = document.getElementById('solved-modal');
+  const SOLVED_LIST = document.getElementById('solved-list');
+  const MODAL_CLOSE   = document.getElementById('modal-close');
+  const EATEN_SCREEN  = document.getElementById('eaten-screen');
+  const EATEN_ANSWER  = document.getElementById('eaten-answer-text');
+
+  const MAX_WRONG = 5;
+  const BASE_SIZE = 260;
+  const MAX_SIZE  = 110;  // vmin units — grows to fill screen
+
+  let riddles = [];        // [{q, a}]
+  let current = null;
+  let solvedRiddles = [];  // [{q, a}]
+  let attempts = [];
+
+  // parse CSV (handles quoted fields with commas)
+  function parseCSV(text) {
+    const rows = [];
+    const lines = text.split(/\r?\n/);
+    for (let i = 1; i < lines.length; i++) {  // skip header
+      const line = lines[i].trim();
+      if (!line) continue;
+      // split on first unquoted comma
+      let inQuote = false;
+      let splitAt = -1;
+      for (let c = 0; c < line.length; c++) {
+        if (line[c] === '"') inQuote = !inQuote;
+        if (!inQuote && line[c] === ',') { splitAt = c; break; }
+      }
+      if (splitAt === -1) continue;
+      const rawQ = line.slice(0, splitAt).trim().replace(/^"|"$/g, '').replace(/""/g, '"');
+      const rawA = line.slice(splitAt + 1).trim().replace(/^"|"$/g, '').replace(/""/g, '"');
+      if (rawQ && rawA) rows.push({ q: rawQ, a: rawA.toLowerCase() });
+    }
+    return rows;
+  }
+
+  function setGollumSize(wrongCount) {
+    if (wrongCount === 0) {
+      IMG.style.width  = BASE_SIZE + 'px';
+      IMG.style.height = BASE_SIZE + 'px';
+      IMG.style.top    = '4%';
+    } else {
+      const t = Math.min(wrongCount / MAX_WRONG, 1);
+      const size = 26 + t * (MAX_SIZE - 26);  // 26vmin → 110vmin
+      IMG.style.width  = size + 'vmin';
+      IMG.style.height = size + 'vmin';
+      IMG.style.top    = (4 - wrongCount * 5) + '%';
+    }
+  }
+
+  // pick a random riddle that hasn't been solved
+  function pickRiddle() {
+    EATEN_SCREEN.classList.remove('open');
+    IMG.src = 'gollum_happy.png';
+    setGollumSize(0);
+    const solvedSet = new Set(solvedRiddles.map(r => r.q));
+    const pool = riddles.filter(r => !solvedSet.has(r.q));
+    if (!pool.length) {
+      TEXT.textContent = "You've answered all the riddles, precious! Refresh to start again.";
+      INPUT.disabled = true;
+      BTN.disabled = true;
+      return;
+    }
+    current = pool[Math.floor(Math.random() * pool.length)];
+    TEXT.textContent = current.q;
+    attempts = [];
+    renderAttempts();
+    INPUT.value = '';
+    INPUT.focus();
+  }
+
+  // flash helper
+  function flash(color) {
+    FLASH.className = color + ' show';
+    setTimeout(() => { FLASH.className = color; }, 350);
+    setTimeout(() => { FLASH.className = ''; }, 700);
+  }
+
+  // render attempts
+  function renderAttempts() {
+    ATT_LIST.innerHTML = '';
+    ATT_LABEL.style.display = attempts.length ? 'block' : 'none';
+    attempts.forEach(a => {
+      const el = document.createElement('div');
+      el.className = 'attempt-item';
+      el.textContent = a;
+      ATT_LIST.appendChild(el);
+    });
+  }
+
+  // render correct counter
+  function renderCounter() {
+    if (solvedRiddles.length === 0) {
+      COUNTER.textContent = '';
+    } else {
+      COUNTER.textContent = `✓ ${solvedRiddles.length} riddle${solvedRiddles.length !== 1 ? 's' : ''} solved`;
+    }
+  }
+
+  // handle answer
+  function checkAnswer() {
+    const guess = INPUT.value.trim().toLowerCase();
+    if (!guess || !current) return;
+
+    if (guess === current.a) {
+      flash('green');
+      IMG.src = 'gollum_happy.png';
+      setGollumSize(0);
+      solvedRiddles.push({ q: current.q, a: current.a });
+      renderCounter();
+      setTimeout(pickRiddle, 900);
+    } else {
+      flash('red');
+      attempts.push(INPUT.value.trim());
+      renderAttempts();
+      IMG.src = attempts.length === MAX_WRONG ? 'gollum_attack.png' : 'gollum_angry.png';
+      setGollumSize(attempts.length);
+
+      if (attempts.length >= MAX_WRONG) {
+        INPUT.disabled = true;
+        BTN.disabled = true;
+        setTimeout(() => {
+          EATEN_ANSWER.textContent = current.a;
+          EATEN_SCREEN.classList.add('open');
+        }, 600);
+      }
+    }
+    INPUT.value = '';
+  }
+
+  BTN.addEventListener('click', checkAnswer);
+  INPUT.addEventListener('keydown', e => { if (e.key === 'Enter') checkAnswer(); });
+
+  // solved modal
+  COUNTER.addEventListener('click', () => {
+    if (!solvedRiddles.length) return;
+    SOLVED_LIST.innerHTML = '';
+    solvedRiddles.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'solved-entry';
+      div.innerHTML = `<div class="q">${r.q}</div><div class="a">Answer: ${r.a}</div>`;
+      SOLVED_LIST.appendChild(div);
+    });
+    MODAL.classList.add('open');
+  });
+
+  MODAL_CLOSE.addEventListener('click', () => MODAL.classList.remove('open'));
+  MODAL.addEventListener('click', e => { if (e.target === MODAL) MODAL.classList.remove('open'); });
+
+  function exitEatenScreen() {
+    if (!EATEN_SCREEN.classList.contains('open')) return;
+    INPUT.disabled = false;
+    BTN.disabled = false;
+    pickRiddle();
+  }
+
+  EATEN_SCREEN.addEventListener('click', exitEatenScreen);
+  document.addEventListener('keydown', exitEatenScreen);
+
+  // load CSV and start
+  fetch('riddles.csv')
+    .then(r => r.text())
+    .then(text => {
+      riddles = parseCSV(text);
+      if (!riddles.length) { TEXT.textContent = 'No riddles found, precious!'; return; }
+      pickRiddle();
+    })
+    .catch(() => { TEXT.textContent = 'Could not load riddles, precious!'; });
+</script>
+</body>
+</html>
