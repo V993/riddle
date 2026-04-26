@@ -164,6 +164,58 @@
       line-height: 1.5;
     }
 
+    @media (max-width: 600px) {
+      #gollum-bg {
+        top: 10vh !important;
+        transform: translate(-50%, 0) !important;
+        opacity: 0.45;
+      }
+
+      .main {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: 100%;
+        padding: 48px 20px 52px;
+        gap: 10px;
+        background: linear-gradient(transparent, rgba(26,16,8,0.97) 30%);
+      }
+
+      #attempts-box {
+        position: static;
+        width: 100%;
+        max-height: none;
+        overflow: visible;
+      }
+
+      #attempts-box {
+        text-align: left;
+      }
+
+      #attempts-label::after {
+        content: ": ";
+      }
+
+      #attempts-list {
+        display: inline;
+      }
+
+      .attempt-item {
+        display: inline;
+        background: none;
+        padding: 0;
+        border-radius: 0;
+        font-size: 0.85rem;
+        color: #cc6666;
+      }
+
+      .attempt-item + .attempt-item::before {
+        content: ", ";
+      }
+    }
+
     /* solved riddles modal */
     #solved-modal {
       display: none;
@@ -219,6 +271,10 @@
 
 <div class="main">
   <p id="riddle-text">Loading riddle…</p>
+  <div id="attempts-box">
+    <div id="attempts-label" style="display:none">Wrong guesses</div>
+    <div id="attempts-list"></div>
+  </div>
   <div class="input-row">
     <input id="answer-input" type="text" placeholder="My answer is…" autocomplete="off" />
     <button id="submit-btn">Submit</button>
@@ -226,11 +282,6 @@
 </div>
 
 <div id="correct-counter"></div>
-
-<div id="attempts-box">
-  <div id="attempts-label" style="display:none">Wrong guesses</div>
-  <div id="attempts-list"></div>
-</div>
 
 <div id="eaten-screen">
   <div class="eaten-answer"><span id="eaten-answer-text"></span></div>
@@ -291,16 +342,24 @@
   }
 
   function setGollumSize(wrongCount) {
+    const mobile = window.innerWidth <= 600;
     if (wrongCount === 0) {
-      IMG.style.width  = BASE_SIZE + 'px';
-      IMG.style.height = BASE_SIZE + 'px';
-      IMG.style.top    = '4%';
+      if (mobile) {
+        IMG.style.width  = '45vmin';
+        IMG.style.height = '45vmin';
+      } else {
+        IMG.style.width  = BASE_SIZE + 'px';
+        IMG.style.height = BASE_SIZE + 'px';
+        IMG.style.top    = '4%';
+      }
     } else {
       const t = Math.min(wrongCount / MAX_WRONG, 1);
-      const size = 26 + t * (MAX_SIZE - 26);  // 26vmin → 110vmin
+      const size = mobile
+        ? 45 + t * (110 - 45)       // 45vmin → 110vmin on mobile
+        : 26 + t * (MAX_SIZE - 26); // 26vmin → 110vmin on desktop
       IMG.style.width  = size + 'vmin';
       IMG.style.height = size + 'vmin';
-      IMG.style.top    = (4 - wrongCount * 5) + '%';
+      if (!mobile) IMG.style.top = (4 - wrongCount * 5) + '%';
     }
   }
 
@@ -335,7 +394,7 @@
   // render attempts
   function renderAttempts() {
     ATT_LIST.innerHTML = '';
-    ATT_LABEL.style.display = attempts.length ? 'block' : 'none';
+    ATT_LABEL.style.display = attempts.length ? (window.innerWidth <= 600 ? 'inline' : 'block') : 'none';
     attempts.forEach(a => {
       const el = document.createElement('div');
       el.className = 'attempt-item';
